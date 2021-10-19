@@ -1,8 +1,100 @@
-setHook("rstudio.sessionInit", function(newSession) {
-  if (newSession)
-    message("Welcome to your Lab Sandbox! To get started, please reference the README.rd file on the right side of your screen.")
-    rstudioapi::previewRd("README.rd")
-}, action = "append")
+## Background ##
+> # Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+ 
 
-options(rpubs.upload.method = "internal")
+> ## Downloading the Data ##
+> setwd("~/hamad")
+> Training <- read.csv("pml-training.csv", header = TRUE)
+> Testing <- read.csv("pml-testing.csv", header = TRUE)
+> 
+> ## libraries ##
+> library(caret)
+Loading required package: ggplot2
+Loading required package: lattice
+> library(dplyr)
 
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+> library(caret)
+> library(utils)
+> library(ggplot2)
+> library(klaR)
+Loading required package: MASS
+
+Attaching package: ‘MASS’
+
+The following object is masked from ‘package:dplyr’:
+
+    select
+
+> library(randomForest)
+randomForest 4.6-14
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: ‘randomForest’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+The following object is masked from ‘package:ggplot2’:
+
+    margin
+
+> library(lubridate)
+
+Attaching package: ‘lubridate’
+
+The following objects are masked from ‘package:base’:
+
+    date, intersect, setdiff, union
+
+> library(corrplot)
+corrplot 0.90 loaded
+> 
+> 
+> ## cleaning the data ##
+> Training <- Training[, -c(2,3,5,6)]
+> Testing <- Testing[, -c(2,3,5,6)]
+> dim(Training)
+[1] 19622   156
+> ZeroData <- nearZeroVar(Training)
+> Training <- Training[, -ZeroData]
+> Testing <- Testing[, -ZeroData]
+> dim(Training)
+[1] 19622    97
+> DeletNA <- supply(Training, function(x) mean(is.na(x)))>0.95
+Error in supply(Training, function(x) mean(is.na(x))) : 
+  could not find function "supply"
+> Training <- Training %>% select_if(colMeans(is.na(.))<0.9)
+> Testing <- Testing %>% select_if(colMeans(is.na(.))<0.9)
+> dim(Training)
+[1] 19622    56
+> sum(is.na(Training))
+[1] 0
+> inTrain = createDataPartition(Training$classe, p = 0.8)[[1]]
+> Training <- Training[inTrain]
+Error in `[.data.frame`(Training, inTrain) : undefined columns selected
+> Training <- Training[inTrain,]
+> Testing <- Testing[-inTrain,]
+> dim(Training)
+[1] 15699    56
+> 
+> 
+> ## Data Analysis ##
+> myColors <- colorRampPalette(c("cyan", "deeppink3"))
+> heatmap(as.matrix(Training[3:54]), col=myColors(100))
+> 
+> corMatrix <- cor(Training[3:54])
+> corrplot(corMatrix, method='color', order='FPC', type='lower')
+> RFFit <- train(classe~., data=Training, meathod='rf', control=RF)
+
+RFTrain <- predict(RFFit, newdata=Training)
